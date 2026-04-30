@@ -45,6 +45,48 @@ const REAL_EN = new Set([
   "test", "run", "build", "error", "log", "git", "dev", "claude", "python",
 ]);
 
+// Real Thai words that wont be converted
+const REAL_TH = new Set([
+  // Pronouns & basic references
+  "ผม", "ฉัน", "หนู", "เรา", "คุณ", "เขา", "เธอ", "มัน", "ท่าน", "พวกเขา",
+  "ใคร", "อะไร", "ที่ไหน", "เมื่อไหร่", "ทำไม", "ยังไง", "อย่างไร",
+
+  // Common verbs
+  "ไป", "มา", "กิน", "นอน", "ดู", "ฟัง", "พูด", "บอก", "ถาม", "ตอบ",
+  "ทำ", "ได้", "ให้", "รู้", "คิด", "รัก", "ชอบ", "ใช้", "เอา", "เป็น",
+  "มี", "อยู่", "ต้อง", "อยาก", "จะ", "ช่วย", "เริ่ม", "หยุด", "ส่ง", "รับ",
+
+  // Common nouns
+  "บ้าน", "โรงเรียน", "ที่ทำงาน", "ร้าน", "ถนน", "รถ", "คน", "เพื่อน",
+  "ครอบครัว", "พ่อ", "แม่", "พี่", "น้อง", "ลูก", "ของ", "งาน", "เงิน",
+  "เวลา", "วัน", "คืน", "เช้า", "เย็น", "อาหาร", "น้ำ", "โทรศัพท์",
+
+  // Common adjectives / adverbs
+  "ดี", "ไม่ดี", "สวย", "หล่อ", "ใหม่", "เก่า", "เร็ว", "ช้า", "มาก", "น้อย",
+  "ใหญ่", "เล็ก", "ร้อน", "เย็น", "แพง", "ถูก", "ง่าย", "ยาก", "ดีมาก",
+
+  // Particles & connectors (very common in Thai sentences)
+  "ครับ", "ค่ะ", "คะ", "นะ", "นะครับ", "นะคะ", "ด้วย", "แล้ว", "ก็", "แต่",
+  "และ", "หรือ", "เพราะ", "ถ้า", "เมื่อ", "ตอน", "กับ", "จาก", "ใน", "ที่",
+  "ของ", "โดย", "ว่า", "อีก", "แค่", "เลย", "ก่อน", "หลัง", "ระหว่าง",
+
+  // Negation & question
+  "ไม่", "ไม่ได้", "ไม่มี", "ไม่ใช่", "ใช่ไหม", "ได้ไหม", "มีไหม", "ไหม",
+  "เปล่า", "ไม่เป็นไร",
+
+  // Greetings & social
+  "สวัสดี", "สวัสดีครับ", "สวัสดีค่ะ", "ขอบคุณ", "ขอบคุณครับ", "ขอบคุณค่ะ",
+  "ขอโทษ", "ไม่เป็นไร", "แล้วเจอกัน", "โอเค", "เดี๋ยว", "รอก่อน", "โอเคครับ",
+
+  // Digital / chat slang (Thai)
+  "อิอิ", "ฮ่าๆ", "ฮ่าฮ่า", "555", "5555", "งง", "โอ้โห", "ว้าว", "อ๋อ",
+  "อ้าว", "เฮ้ย", "โอ้", "อุ๊ย", "แอบ", "ปิ๊ง", "ยิ้ม",
+
+  // Numbers as Thai words
+  "หนึ่ง", "สอง", "สาม", "สี่", "ห้า", "หก", "เจ็ด", "แปด", "เก้า", "สิบ",
+  "ร้อย", "พัน", "หมื่น", "แสน", "ล้าน",
+]);
+
 const THAI_RE = /[฀-๿]/;
 const MAPPABLE = new Set(Object.keys(EN_TO_TH));
 
@@ -109,6 +151,15 @@ function fix_token(token: string): string {
   return token;
 }
 
+function fix_thai_segment(text: string): string {
+  const tokens = text.split(/(\s+)/);
+  return tokens.map(tok => {
+    if (/^\s+$/.test(tok)) return tok;
+    if (REAL_TH.has(tok)) return tok; // Keep real Thai words
+    return th_to_en(tok); // Convert other Thai text
+  }).join('');
+}
+
 function fix_ascii_segment(text: string): string {
   const tokens = text.split(/(\s+)/);
   return tokens.map(tok => fix_token(tok)).join('');
@@ -128,13 +179,8 @@ export function fix(text: string): string {
       if (!part) continue;
 
       if (THAI_RE.test(part)) {
-        // Thai segment → th_to_en
-        let converted = th_to_en(part);
-        // Fix number sequences
-        converted = converted.replace(/\//g, '2');
-        converted = converted.replace(/_/g, '3');
-        converted = converted.replace(/-/g, '4');
-        result.push(converted);
+        // Thai segment → check for real Thai words first
+        result.push(fix_thai_segment(part));
       } else {
         // ASCII segment → token by token
         result.push(fix_ascii_segment(part));
