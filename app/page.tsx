@@ -1,4 +1,4 @@
-import { ConverterUI } from "@/components/converter-ui";
+import { ConverterUI } from "../components/converter-ui";
 
 export default function Home() {
   return (

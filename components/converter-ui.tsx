@@ -1,30 +1,45 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { fix } from "@/lib/converter";
+import { fix } from "../lib/converter";
 
 export function ConverterUI() {
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (input) {
-      setOutput(fix(input));
-    } else {
+    try {
+      if (input) {
+        const result = fix(input);
+        setOutput(result);
+        setError(null);
+      } else {
+        setOutput("");
+        setError(null);
+      }
+    } catch (err) {
+      console.error("Conversion error:", err);
+      setError("Conversion failed. Please check console for details.");
       setOutput("");
     }
   }, [input]);
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(output);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(output);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Copy failed:", err);
+    }
   };
 
   const handleClear = () => {
     setInput("");
     setOutput("");
+    setError(null);
   };
 
   return (
@@ -36,6 +51,12 @@ export function ConverterUI() {
         <p className="text-gray-600 text-center mb-8">
           แก้ข้อความพิมพ์ผิด keyboard layout (Thai-English)
         </p>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+            {error}
+          </div>
+        )}
 
         <div className="space-y-4">
           <div>
